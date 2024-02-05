@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scrum Utils</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+  <link rel="stylesheet" href="https://code.getmdl.io/1.3.0/material.indigo-pink.min.css">
+  <style>
+    body {
+      background-color: #f3f3f3;
+    }
+
+    #contador {
+      text-align: center;
+      margin-top: 20px;
+    }
+
+    #nombrePersona {
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
+
+    #tiempoRestante {
+      font-size: 18px;
+      margin-bottom: 20px;
+    }
+
+    #listaUsers {
+      list-style-type: none;
+      padding: 0;
+    }
+
+    .user-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background-color: #ffffff;
+      border: 1px solid #ddd;
+      margin-bottom: 8px;
+      padding: 8px;
+    }
+
+    .user-nombre {
+      flex-grow: 1;
+      font-size: 18px;
+    }
+
+    .user-eliminar {
+      cursor: pointer;
+      font-size: 24px;
+      color: #d9534f;
+    }
+
+    .user-eliminar:hover {
+      color: #a94442;
+    }
+
+    #nuevaTarjeta {
+      margin-top: 20px;
+    }
+
+    #nuevaTabla {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    #nuevaTabla th, #nuevaTabla td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+    }
+
+    .mdl-card-tabla {
+      width: 100%;
+      max-width: 600px;
+      margin: 0 auto;
+      margin-bottom: 20px;
+    }
+
+    .logo-img {
+      height: 100%;
+      width: auto;
+      margin-right: 10px;
+    }
+  </style>
+</head>
+<body class="mdl-layout mdl-js-layout mdl-layout--fixed-header">
+
+  <header class="mdl-layout__header">
+    <div class="mdl-layout__header-row">
+      <img class="logo-img" src="Emergya.png" alt="Logo">
+      <span class="mdl-layout-title">Emergya Daily Tool</span>
+    </div>
+  </header>
+
+  <main class="mdl-layout__content">
+    <div class="mdl-grid">
+      <div class="mdl-cell mdl-cell--5-col">
+        <!-- Lista de users -->
+        <div class="mdl-card mdl-shadow--2dp" style="margin-bottom: 16px;">
+          <div class="mdl-card__title">
+            <h2 class="mdl-card__title-text">Users</h2>
+          </div>
+          <div class="mdl-card__supporting-text">
+            <!-- Lista de users aquí -->
+            <ul id="listaUsers" class="mdl-list"></ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="mdl-cell mdl-cell--5-col">
+        <!-- Tarjeta con contador y botones -->
+        <div class="mdl-card mdl-shadow--4dp" id="contador">
+          <div class="mdl-card__title">
+            <h2 class="mdl-card__title-text" id="nombrePersona"></h2>
+          </div>
+          <div class="mdl-card__supporting-text" id="tiempoRestante"></div>
+          <div class="mdl-card__actions mdl-card--border">
+            <button id="inicio" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--primary">
+              Iniciar
+            </button>
+            <button id="pausar" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--accent">
+              Pausar
+            </button>
+            <button id="siguiente" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--colored">
+              Siguiente
+            </button>
+          </div>
+          <audio id="inicioAudio" src="inicio.mp3"></audio>
+          <audio id="avisoAudio" src="aviso.mp3"></audio>
+          <audio id="pausaAudio" src="pausa.mp3"></audio>
+          <audio id="siguienteAudio" src="siguiente.mp3"></audio>
+        </div>
+         <!-- Nueva tarjeta con tabla -->
+        <div class="mdl-card-tabla  mdl-shadow--4dp" id="nuevaTarjeta">
+          <div class="mdl-card__title">
+            <h2 class="mdl-card__title-text">Añadir WI</h2>
+          </div>
+          <div class="mdl-card__supporting-text">
+            <input type="text" id="wiInput" placeholder="PSNDEV-" value="PSNDEV-">
+            <button id="añadirWI" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--accent">
+              Añadir
+            </button>
+          </div>
+          <div class="mdl-card__supporting-text">
+            <table id="nuevaTabla">
+              <thead>
+                <tr>
+                  <th>USER</th>
+                  <th>WI</th>
+                  <th>URL</th> <!-- Nueva columna URL -->
+                </tr>
+              </thead>
+              <tbody id="tablaCuerpo"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script defer src="https://code.getmdl.io/1.3.0/material.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      let users = [];
+      let usersNoMostrados = [];
+      let currentIndex = 0;
+      let countdownTimer;
+      let tiempoRestante = 120; // 2 minutos en segundos
+
+      // Obtener elementos de audio
+      const inicioAudio = document.getElementById('inicioAudio');
+      const avisoAudio = document.getElementById('avisoAudio');
+      const pausaAudio = document.getElementById('pausaAudio');
+      const siguienteAudio = document.getElementById('siguienteAudio');
+      const eliminarAudio = new Audio('afuera.wav'); // Agrega el sonido de eliminación
+
+      // Elementos de la nueva tarjeta
+      const wiInput = document.getElementById('wiInput');
+      const tablaCuerpo = document.getElementById('tablaCuerpo');
+      const añadirWIButton = document.getElementById('añadirWI');
+
+      añadirWIButton.addEventListener('click', añadirWI);
+
+      function añadirWI() {
+        const user = document.getElementById('nombrePersona').textContent;
+        const wi = wiInput.value.trim();
+        const urlBase = 'https://centerpoint.int.hpe.com:8443/browse/'; // URL base
+
+        if (wi !== '') {
+          // Crear una nueva fila en la tabla con USER, WI y URL
+          const newRow = tablaCuerpo.insertRow();
+          const cellUser = newRow.insertCell(0);
+          const cellWI = newRow.insertCell(1);
+          const cellURL = newRow.insertCell(2); // Nueva celda para URL
+
+          cellUser.textContent = user;
+          cellWI.textContent = wi;
+
+          // Construir y asignar la URL
+          const url = urlBase + wi;
+          cellURL.innerHTML = `<a href="${url}" target="_blank">${url}</a>`;
+
+          // Limpiar el campo de entrada después de añadir
+          wiInput.value = 'PSNDEV-';
+
+          document.getElementById('centerpoint-issue').src=url;
+        }
+      }
+
+      function iniciarAplicacion(data) {
+        // Mezclar el array de users de forma aleatoria
+        users = mezclarArray(data);
+        users.push({nombre:'MSANCHEZ'});
+        usersNoMostrados = [...users]; // Copiar la lista de users
+
+        document.getElementById('inicio').addEventListener('click', iniciarContador);
+        document.getElementById('pausar').addEventListener('click', pausarContador);
+        document.getElementById('siguiente').addEventListener('click', siguienteUser);
+
+        actualizarListaUsers();
+      }
+
+      function mostrarUser(user) {
+        document.getElementById('nombrePersona').textContent = `${user.nombre}`;
+        reiniciarContador();
+        // Reproducir sonido al mostrar la persona
+        siguienteAudio.play();
+
+        // Eliminar la persona mostrada de la lista de personas no mostradas
+        usersNoMostrados.splice(currentIndex, 1);
+
+        // Actualizar la lista de personas en la interfaz
+        actualizarListaUsers();
+      }
+
+      function iniciarContador() {
+        // Reproducir sonido al iniciar el contador
+        inicioAudio.play();
+
+        // Iniciar el contador solo si no está corriendo
+        if (!countdownTimer) {
+          countdownTimer = setInterval(function () {
+            // Actualizar y mostrar el tiempo restante
+            var tiempoRestanteStr = secondsToString(tiempoRestante);
+            document.getElementById('tiempoRestante').textContent = `Tiempo restante: ${tiempoRestanteStr}`;
+
+            // Si el tiempo llega a 0, pasar a la siguiente persona
+            // y reiniciar el contador
+            if (tiempoRestante <= 0) {
+              siguienteUser();
+            } else {
+              if(tiempoRestante <= 10){
+                avisoAudio.play();
+              }
+              tiempoRestante--;
+            }
+          }, 1000);
+        }
+      }
+
+      function secondsToString(seconds) {
+        var minute = Math.floor((seconds / 60) % 60);
+        minute = (minute < 10)? '0' + minute : minute;
+        var second = seconds % 60;
+        second = (second < 10)? '0' + second : second;
+        return minute + ':' + second;
+      }
+
+      function pausarContador() {
+        clearInterval(countdownTimer);
+        countdownTimer = null; // Establecer a null para indicar que el contador está pausado
+        pausaAudio.play();
+      }
+
+      function reiniciarContador() {
+        tiempoRestante = 120; // Reiniciar el contador a 2 minutos
+        document.getElementById('tiempoRestante').textContent = `Tiempo restante: ${tiempoRestante} segundos`;
+      }
+
+      function siguienteUser() {
+        // Reproducir sonido al pasar a la siguiente persona
+        siguienteAudio.play();
+
+        // Pasar a la siguiente persona
+        mostrarUser(usersNoMostrados[currentIndex]);
+      }
+
+      function actualizarListaUsers() {
+        const listaUsers = document.getElementById('listaUsers');
+        listaUsers.innerHTML = ''; // Limpiar la lista antes de volver a agregar
+
+        usersNoMostrados.forEach((user, index) => {
+          const listItem = document.createElement('li');
+          listItem.className = 'user-item';
+
+          const spanNombre = document.createElement('span');
+          spanNombre.className = 'user-nombre';
+          spanNombre.textContent = user.nombre;
+
+          const spanEliminar = document.createElement('span');
+          spanEliminar.className = 'user-eliminar';
+          spanEliminar.innerHTML = '<i class="material-icons">delete</i>';
+          spanEliminar.addEventListener('click', () => eliminarUser(index));
+          spanEliminar.addEventListener('click', () => eliminarAudio.play()); // Reproducir sonido al hacer clic en eliminar
+
+          listItem.appendChild(spanNombre);
+          listItem.appendChild(spanEliminar);
+
+          listaUsers.appendChild(listItem);
+        });
+
+        // Actualizar el estilo de la lista después de agregar elementos
+        componentHandler.upgradeDom();
+      }
+
+      function eliminarUser(index) {
+        // Eliminar la persona del array y actualizar la lista en la interfaz
+        usersNoMostrados.splice(index, 1);
+        actualizarListaUsers();
+      }
+
+      // Función para mezclar un array de forma aleatoria
+      function mezclarArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+      }
+
+      // Cargar la lista de personas desde el archivo JSON
+      fetch('users.json')
+        .then(response => response.json())
+        .then(data => iniciarAplicacion(data.personas));
+    });
+  </script>
+</body>
+</html>
